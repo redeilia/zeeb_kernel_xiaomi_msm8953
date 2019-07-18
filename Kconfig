@@ -4,6 +4,14 @@
 #
 mainmenu "Linux/$ARCH $KERNELVERSION Kernel Configuration"
 
+config ARCH_QCOM
+	bool "Qualcomm Platforms"
+	select PINCTRL
+
+config RDSP_QCOM
+	bool "RSDP Qualcomm Platforms"
+	select PINCTRL
+
 config SRCARCH
 	string
 	option env="SRCARCH"

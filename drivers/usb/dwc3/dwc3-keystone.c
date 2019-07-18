@@ -39,6 +39,8 @@
 #define USBSS_IRQ_COREIRQ_EN	BIT(0)
 #define USBSS_IRQ_COREIRQ_CLR	BIT(0)
 
+static u64 kdwc3_dma_mask;
+
 struct dwc3_keystone {
 	struct device			*dev;
 	struct clk			*clk;
@@ -102,9 +104,17 @@ static int kdwc3_probe(struct platform_device *pdev)
 	kdwc->dev = dev;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!res) {
+		dev_err(dev, "missing usbss resource\n");
+		return -EINVAL;
+	}
+
 	kdwc->usbss = devm_ioremap_resource(dev, res);
 	if (IS_ERR(kdwc->usbss))
 		return PTR_ERR(kdwc->usbss);
+
+	kdwc3_dma_mask = dma_get_mask(dev);
+	dev->dma_mask = &kdwc3_dma_mask;
 
 	kdwc->clk = devm_clk_get(kdwc->dev, "usb");
 	if (IS_ERR(kdwc->clk)) {
@@ -114,7 +124,7 @@ static int kdwc3_probe(struct platform_device *pdev)
 
 	error = clk_prepare_enable(kdwc->clk);
 	if (error < 0) {
-		dev_err(kdwc->dev, "unable to enable usb clock, error %d\n",
+		dev_dbg(kdwc->dev, "unable to enable usb clock, err %d\n",
 			error);
 		return error;
 	}
@@ -122,7 +132,6 @@ static int kdwc3_probe(struct platform_device *pdev)
 	irq = platform_get_irq(pdev, 0);
 	if (irq < 0) {
 		dev_err(&pdev->dev, "missing irq\n");
-		error = irq;
 		goto err_irq;
 	}
 

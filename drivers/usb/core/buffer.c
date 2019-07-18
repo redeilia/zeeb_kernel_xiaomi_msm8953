@@ -62,17 +62,16 @@ int hcd_buffer_create(struct usb_hcd *hcd)
 	char		name[16];
 	int		i, size;
 
-	if (!IS_ENABLED(CONFIG_HAS_DMA) ||
-	    (!is_device_dma_capable(hcd->self.sysdev) &&
-	     !(hcd->driver->flags & HCD_LOCAL_MEM)))
+	if (!hcd->self.controller->dma_mask &&
+	    !(hcd->driver->flags & HCD_LOCAL_MEM))
 		return 0;
 
 	for (i = 0; i < HCD_BUFFER_POOLS; i++) {
 		size = pool_max[i];
 		if (!size)
 			continue;
-		snprintf(name, sizeof(name), "buffer-%d", size);
-		hcd->pool[i] = dma_pool_create(name, hcd->self.sysdev,
+		snprintf(name, sizeof name, "buffer-%d", size);
+		hcd->pool[i] = dma_pool_create(name, hcd->self.controller,
 				size, size, 0);
 		if (!hcd->pool[i]) {
 			hcd_buffer_destroy(hcd);
@@ -94,12 +93,8 @@ void hcd_buffer_destroy(struct usb_hcd *hcd)
 {
 	int i;
 
-	if (!IS_ENABLED(CONFIG_HAS_DMA))
-		return;
-
 	for (i = 0; i < HCD_BUFFER_POOLS; i++) {
 		struct dma_pool *pool = hcd->pool[i];
-
 		if (pool) {
 			dma_pool_destroy(pool);
 			hcd->pool[i] = NULL;
@@ -122,13 +117,9 @@ void *hcd_buffer_alloc(
 	struct usb_hcd		*hcd = bus_to_hcd(bus);
 	int			i;
 
-	if (size == 0)
-		return NULL;
-
 	/* some USB hosts just use PIO */
-	if (!IS_ENABLED(CONFIG_HAS_DMA) ||
-	    (!is_device_dma_capable(bus->sysdev) &&
-	     !(hcd->driver->flags & HCD_LOCAL_MEM))) {
+	if (!bus->controller->dma_mask &&
+	    !(hcd->driver->flags & HCD_LOCAL_MEM)) {
 		*dma = ~(dma_addr_t) 0;
 		return kmalloc(size, mem_flags);
 	}
@@ -137,7 +128,7 @@ void *hcd_buffer_alloc(
 		if (size <= pool_max[i])
 			return dma_pool_alloc(hcd->pool[i], mem_flags, dma);
 	}
-	return dma_alloc_coherent(hcd->self.sysdev, size, dma, mem_flags);
+	return dma_alloc_coherent(hcd->self.controller, size, dma, mem_flags);
 }
 
 void hcd_buffer_free(
@@ -153,9 +144,8 @@ void hcd_buffer_free(
 	if (!addr)
 		return;
 
-	if (!IS_ENABLED(CONFIG_HAS_DMA) ||
-	    (!is_device_dma_capable(bus->sysdev) &&
-	     !(hcd->driver->flags & HCD_LOCAL_MEM))) {
+	if (!bus->controller->dma_mask &&
+	    !(hcd->driver->flags & HCD_LOCAL_MEM)) {
 		kfree(addr);
 		return;
 	}
@@ -166,5 +156,5 @@ void hcd_buffer_free(
 			return;
 		}
 	}
-	dma_free_coherent(hcd->self.sysdev, size, addr, dma);
+	dma_free_coherent(hcd->self.controller, size, addr, dma);
 }

@@ -49,7 +49,7 @@ config ARM64
 	select ARM_PSCI_FW
 	select BUILDTIME_EXTABLE_SORT
 	select CLONE_BACKWARDS
-	select COMMON_CLK if !ARCH_QCOM
+	select COMMON_CLK if !RDSP_QCOM
 	select CPU_PM if (SUSPEND || CPU_IDLE)
 	select DCACHE_WORD_ACCESS
 	select EDAC_SUPPORT
@@ -1332,6 +1332,50 @@ config ARCH_HIBERNATION_HEADER
 
 config ARCH_SUSPEND_POSSIBLE
 	def_bool y
+
+config ARCH_QCOM
+	bool "Qualcomm Platforms"
+	select GPIOLIB
+	select PINCTRL
+	help
+	  This enables support for the ARMv8 based Qualcomm chipsets.
+
+config MACH_XIAOMI
+	bool "Xiaomi devices"
+	help
+	  This enables support for Xiaomi devices.
+
+if MACH_XIAOMI
+
+config MACH_XIAOMI_MSM8953
+	bool
+	select ARCH_MSM
+	select ARCH_QCOM
+
+choice
+	prompt "Xiaomi device"
+	default MACH_XIAOMI_DUMMY
+
+config MACH_XIAOMI_DUMMY
+	bool "Dummy device"
+	help
+	  A stub configuration that doesn't enable support for anything.
+
+config MACH_XIAOMI_MIDO
+	bool "Redmi Note 4(X)"
+	select MACH_XIAOMI_MSM8953
+	help
+	  This enables support for Xiaomi Redmi Note 4(X).
+
+config MACH_XIAOMI_TISSOT
+	bool "Mi A1"
+	select MACH_XIAOMI_MSM8953
+	help
+	  This enables support for Xiaomi Mi A1.
+
+endchoice
+
+endif
 
 endmenu
 
